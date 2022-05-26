@@ -1,0 +1,459 @@
+<html>
+    <head>
+        <title> DBMS Query Converter </title>
+    </head>
+
+    <style type="text/css">
+        
+        *{
+            margin:0;
+            padding: 0;
+        }
+        
+        body{
+            animation: animate 1s;
+            width:100%;
+            height:100vh;
+        }
+        
+        .box{
+            background: linear-gradient(.35turn,#C9FFBF,#FFAFBD);
+            border-radius: 10px;
+            margin: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 500px;
+            height: 400px;
+            margin-top: 130px;  
+            margin-bottom: 30px;  
+            color: rgb(37, 9, 116);
+        }
+        
+        .inner{
+            width: 80%;
+            height: 80%;
+        
+        }
+        
+        
+        .header{
+            margin: 20px;
+            font-size: 30px;
+        }
+        
+        .form{
+            margin: 20px;
+            font-size: 30px;
+        }
+        
+        .input{
+            border-radius: 5px;
+            width:100%;
+            height: 40px;
+            margin: auto;
+            transition: .5s;
+            padding: 3px;
+            border: 2px solid red;  
+        }
+        .input:focus{
+            border-radius: 15px;
+            border-color: #20e70e;
+            padding:7px;
+            outline: none;
+        }
+        
+        .btn{
+           font-size: 20px;
+           color: rgb(241, 237, 235);
+           background-color: rgb(6, 40, 85);
+           width: 40%;
+           border-radius: 3px;
+           display: block;
+           margin: auto;
+           outline: none;
+        }
+        
+        .btn:hover{
+            color:aqua;
+            background-color: black;
+            box-shadow: 1px 0 40px 4px #3b87fa;
+            outline: none;
+        }
+        
+        #answer{
+            font-size: 20px;
+            margin: 10px;
+        }
+        
+        @keyframes animate{
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        
+            to{
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @media only screen and (max-width: 1000px){
+            .box{
+                width: 90%;
+                height:100%;
+            }
+        }
+    </style>
+
+    <script>
+        const SELECT = "&#963"
+        const PROJECT = "&#960"
+        const OR = " &#8744 "
+        const AND = " &#8743 "
+        const MINUS = " &#8722 "
+        const INTERSECT = " &#8745 "
+        const UNION = " &#8899 " // &#8746
+        const THETA_JOIN = " &#10781 "
+        const CROSS_JOIN = " &#10799 "
+        const LEFT_OUTER = " &#10197 "
+        const RIGHT_OUTER = " &#10198 "
+
+
+        function check() {
+            var question = document.getElementById("query").value.toLowerCase();
+            var answer = document.getElementById("answer");
+
+            //answer.innerHTML += '<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' -->
+            answer.innerHTML = recurse(question)
+        }
+
+        function recurse(expression) {
+            const checkChain = /\((.*)\)/
+
+            expressions = []
+
+            expressions.push(expression)
+
+            while (checkChain.test(expression)) {
+                answer = checkChain.exec(expression)
+                expressions.push(answer[1])
+                expression = answer[1]
+            }
+
+            for (i = 0; i < expressions.length - 2; i++) {
+                expressions[i] = expressions[i].replace("(" + expressions[i+1] + ")", "")
+            }
+
+            answer = fetch(expressions[expressions.length - 1])
+            for (i = expressions.length - 2; i >= 0; i--) {
+                answer = fetch(expressions[i]) + "(" + answer + ")"
+            }
+
+            return answer
+        }
+
+        function fetch(question) {
+
+            minusCheck = /.* minus .*/
+            intersectCheck = /.* intersect .*/
+            unionCheck = /.* union .*/
+            insertCheck = /insert into .*/
+            selectCheck = /select .* from .*/
+            deleteCheck = /delete from .*/
+            crossJoinCheck = /select .* from [a-zA-Z0-9_]+ cross join .*/
+            thetaJoinCheck = /select .* from [a-zA-Z0-9_]+ inner join [a-zA-Z0-9_]+ on .*/
+            naturalJoin = /select .* from [a-zA-Z0-9_]+ natural join [a-zA-Z0-9_]+.*/
+            leftOuterJoin = /select .* from [a-zA-Z0-9_]+ left outer join [a-zA-Z0-9_]+ on .*/
+            rightOuterJoin = /select .* from [a-zA-Z0-9_]+ right outer join [a-zA-Z0-9_]+ on .*/
+
+            answer = ""
+
+            if (minusCheck.test(question)) {
+                answer = minusOperation(question)
+            } else if (intersectCheck.test(question)) {
+                answer = intersectOperation(question)
+            } else if (unionCheck.test(question)) {
+                answer = unionOperation(question)
+            } else if (insertCheck.test(question)) {
+                answer = insertOperation(question)
+            } else if (deleteCheck.test(question)) {
+                answer = deleteOperation(question)
+            } else if (thetaJoinCheck.test(question)) {
+                answer = thetaOperation(question)
+            } else if (crossJoinCheck.test(question)) {
+                answer = crossJoinOperation(question)
+            } else if (naturalJoin.test(question)) {
+                answer = naturalJoinOperation(question)
+            } else if (leftOuterJoin.test(question)) {
+                answer = leftOuterJoinOperation(question)
+            } else if (rightOuterJoin.test(question)) {
+                answer = rightOuterJoinOperation(question)
+            } else if (selectCheck.test(question)) {
+                answer = selectExpression(question)
+            }
+
+            return answer;
+        }
+
+        function rightOuterJoinOperation(expression) {
+            const thetaJoin = /select (.*) from ([a-zA-Z0-9_]+) right outer join ([a-zA-Z0-9_]+) on (.*)[ ]?(where .*)?/
+
+            query = thetaJoin.exec(expression)
+
+            if (query == null) {
+                return ""
+            }
+
+            query[1] = (query[1] == "*") ? "" : query[1].replaceAll(" as ", "/")
+
+            answer = PROJECT + "<sub>" + query[1] + "</sub>" + "("
+
+            if (query[5] != null) {
+                where = query[5].replace("where ", "")
+                answer = answer + SELECT + "<sub>" + where + "</sub>" + "(" + query[2] + RIGHT_OUTER + query[3] + "))"
+            } else {
+                answer = answer + query[2] + RIGHT_OUTER + query[3] + ")"
+            }
+
+            return answer
+        }
+
+        function leftOuterJoinOperation(expression) {
+            const thetaJoin = /select (.*) from ([a-zA-Z0-9_]+) left outer join ([a-zA-Z0-9_]+) on (.*)[ ]?(where .*)?/
+
+            query = thetaJoin.exec(expression)
+
+            if (query == null) {
+                return ""
+            }
+
+            query[1] = (query[1] == "*") ? "" : query[1].replaceAll(" as ", "/")
+
+            answer = PROJECT + "<sub>" + query[1] + "</sub>" + "("
+
+            if (query[5] != null) {
+                where = query[5].replace("where ", "")
+                answer = answer + SELECT + "<sub>" + where + "</sub>" + "(" + query[2] + LEFT_OUTER + query[3] + "))"
+            } else {
+                answer = answer + query[2] + LEFT_OUTER + query[3] + ")"
+            }
+
+            return answer
+        }
+
+        function thetaOperation(expression) {
+            const thetaJoin = /select (.*) from ([a-zA-Z0-9_]+) inner join ([a-zA-Z0-9_]+) on (.*)[ ]?(where .*)?/
+
+            query = thetaJoin.exec(expression)
+
+            if (query == null) {
+                return ""
+            }
+
+            query[1] = (query[1] == "*") ? "" : query[1].replaceAll(" as ", "/")
+
+            answer = PROJECT + "<sub>" + query[1] + "</sub>" + "("
+
+            if (query[5] != null) {
+                where = query[5].replace("where ", "")
+                answer = answer + SELECT + "<sub>" + where + "</sub>" + "(" + query[2] + THETA_JOIN + "<sub>" + query[4] + "</sub>" + query[3] + "))"
+            } else {
+                answer = answer + query[2] + THETA_JOIN + "<sub>" + query[4] + "</sub>" + query[3] + ")"
+            }
+
+            return answer
+        }
+
+        function crossJoinOperation(expression) {
+            const crossJoin = /select (.*) from ([a-zA-Z0-9_]+) cross join ([a-zA-Z0-9_]+)[ ]?(.*)/
+
+            query = crossJoin.exec(expression)
+
+            if (query == null) {
+                return ""
+            }
+
+            if (query[4] == null) {
+                value = (query[1] == "*") ? "" : query[1].replaceAll(" as ", "/")
+                return PROJECT + "<sub>" + value + "</sub>" + "(" + query[2] + CROSS_JOIN + query[3] + ")"
+            } else {
+                value = (query[1] == "*") ? "" : query[1].replaceAll(" as ", "/")
+                match = /where (.*)/g
+                ans = match.exec(query[4])
+
+                if (ans == null) {
+                    return PROJECT + "<sub>" + value + "</sub>" + "(" + query[2] + CROSS_JOIN + query[3] + ")"
+                } else {
+                    a = ans[1].replaceAll(" and ", AND)
+                    a = a.replaceAll(" or ", OR)
+
+                    return PROJECT + "<sub>" + value + "</sub>" + "(" + SELECT + "<sub>" + a + "</sub>" + "(" + query[2] + CROSS_JOIN + query[3] + "))"
+                }
+            }
+        }
+
+
+        function naturalJoinOperation(expression) {
+            const naturalJoin = /select (.*) from ([a-zA-Z0-9_]+) natural join ([a-zA-Z0-9_]+).*(where .*)?/
+
+            query = naturalJoin.exec(expression)
+
+            if (query == null) {
+                return ""
+            }
+
+            if (query[4] == null) {
+                value = (query[1] == "*") ? "" : query[1].replaceAll(" as ", "/")
+                return PROJECT + "<sub>" + value + "</sub>" + "(" + query[2] + THETA_JOIN + query[3] + ")"
+            } else {
+                value = (query[1] == "*") ? "" : query[1].replaceAll(" as ", "/")
+                match = /where (.*)/g
+                ans = match.exec(query[4])
+
+                if (ans == null) {
+                    return PROJECT + "<sub>" + value + "</sub>" + "(" + query[2] + THETA_JOIN + query[3] + ")"
+                } else {
+                    a = ans[1].replaceAll(" and ", AND)
+                    a = a.replaceAll(" or ", OR)
+
+                    return PROJECT + "<sub>" + value + "</sub>" + "(" + SELECT + "<sub>" + a + "</sub>" + "(" + query[2] + THETA_JOIN + query[3] + "))"
+                }
+            }
+        }
+
+        function deleteOperation(expression) {
+            const deleteRe = /delete from ([A-Za-z_]+) where (.*)/
+
+            query = deleteRe.exec(expression)
+
+            if (query != null) {
+                tableName = query[1]
+                answer = minusOperation("(select * from " + query[1] + ") minus (" + "select * from " + query[1] + " where " + query[2] + ")")
+                return tableName + " = " + answer
+            }
+
+            return ""
+        }
+
+        function insertOperation(expression) {
+            const insert = /insert into ([A-Za-z0-9_]+) .* values (.*)/
+
+            query = insert.exec(expression)
+
+            if (query == null) {
+                return ""
+            }
+
+            answer = query[2].replaceAll(/\)[ ]?,[ ]?\(/g, ") " + UNION + " (")
+
+            return query[1] + " = " + PROJECT + "(" + query[1] + ") " + UNION + " " + answer
+        }
+
+        function intersectOperation(expression) {
+            const intersect = /(.*) intersect (.*)/
+
+            query = intersect.exec(expression)
+
+            if (query != null) {
+                return selectExpression(query[1]) + INTERSECT + selectExpression(query[2])
+            }
+
+            return ""
+        }
+
+        function unionOperation(expression) {
+            const union = /(.*) union (.*)/
+
+            query = union.exec(expression)
+
+            if (query != null) {
+                return selectExpression(query[1]) + UNION + selectExpression(query[2])
+            }
+
+            return ""
+        }
+
+        function minusOperation(expression) {
+            const minus = /(.*) minus (.*)/
+
+            query = minus.exec(expression)
+
+            if (query != null) {
+                return selectExpression(query[1]) + MINUS + selectExpression(query[2])
+            }
+
+            return ""
+        }
+
+        function selectExpression(expression) {
+            remove = /(?<=((?:order by)|(?:group by)|(?:having)))(.*)/
+
+            rem_ans = remove.exec(expression)
+
+            if (rem_ans != null) {
+                expression = expression.replace(rem_ans[1] + rem_ans[2], "").trim();
+            }
+
+            const re = /select ([a-z ,\.]+|\*) from ([a-z0-9]+)[ ]?(.*)/
+
+            if ((myarray = re.exec(expression)) != null) {
+                answer = SELECT
+
+                if (myarray[3] != null) {
+                    answer += '<sub>' + getPredicate(myarray[3]) + '</sub>'    
+                }
+
+                answer += '(' + myarray[2] + ')'
+
+                if (myarray[1] == "*") {
+                    return answer;
+                }
+                myarray[1] = myarray[1].replaceAll(" as ", "/")
+                return PROJECT + "<sub>" + myarray[1] + "</sub>" + "(" + answer + ")"
+            }
+
+            return expression
+        }
+
+        function getPredicate(expression) {
+            const re = /where (.*)[ ]?\(?.*/
+
+            conditions = re.exec(expression);
+
+            if (conditions == null) {
+                return "";
+            }
+
+            modifiedConditions = conditions[1].replace(" and ", AND)
+            modifiedConditions = modifiedConditions.replace(" or ", OR)
+            
+            return modifiedConditions
+        }
+    </script>
+
+    <body>
+        <!-- <input type="text" id="query" class="question" />
+        <br />
+        <label id="answer"> Hello </label>
+        <br />
+        <button id="submit" onclick="check()"> Submit </button> -->
+
+
+        <div class="box">
+            <div class="inner">
+                <div class="header">
+                    <p>SQL to Relational Converter</p>
+                </div>
+                <div class="form">
+                    <input type="text" id="query" class="input" placeholder="Enter SQL query">
+                    <br /><br>
+                    <label> Relational Algebra:</label><br>
+                    <label id="answer"> </label>
+                    <br /><br>
+                    <button id="submit" class="btn" onclick="check()"> Submit </button>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

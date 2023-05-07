@@ -71,6 +71,7 @@
            border-radius: 3px;
            display: block;
            margin: auto;
+           padding: 5px;
            outline: none;
         }
         
@@ -79,6 +80,15 @@
             background-color: black;
             box-shadow: 1px 0 40px 4px #3b87fa;
             outline: none;
+        }
+        
+        .btn a{
+            text-decoration: none;
+            color: white;
+        }
+        
+        #line{
+            margin:15px;
         }
         
         #answer{
@@ -452,6 +462,8 @@
                     <label id="answer"> </label>
                     <br /><br>
                     <button id="submit" class="btn" onclick="check()"> Submit </button>
+                    <br><hr id="line">
+                    <button class="btn"><a href="UserManual.pdf" target="_blank" download="User Manual" >User Manual</a></button>
                 </div>
             </div>
         </div>
